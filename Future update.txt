@@ -1,0 +1,4 @@
+summary(traffic_data)
+hist(traffic_data$Congestion, main="Congestion Distribution", xlab="Congestion Level")
+boxplot(Congestion ~ Day, data=traffic_data, main="Congestion by Day")
+plot(table(traffic_data$Hour), type="h", main="Traffic Counts by Hour", xlab="Hour", ylab="Frequency")

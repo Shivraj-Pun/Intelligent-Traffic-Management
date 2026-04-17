@@ -1,0 +1,13 @@
+smart_traffic_route_planner/
+├── streamlit_ui/
+│   ├── main.py
+│   ├── routing.py
+│   ├── eda.py
+│   └── utils.py
+├── r_model_api/
+│   ├── traffic_model_logic.R
+│   └── traffic_model_api.R
+├── traffic_data/
+│   └── live_traffic_fetcher.R
+├── requirements.txt
+├── README.md

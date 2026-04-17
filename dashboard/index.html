@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intelligent Traffic Management — Dashboard</title>
+  <meta name="description" content="Real-time traffic management dashboard with congestion prediction, travel analytics, and route optimization." />
+  <link rel="stylesheet" href="index.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <div class="dashboard">
+
+    <!-- ========== HEADER ========== -->
+    <header class="header animate-in delay-1" id="dashboard-header">
+      <div class="header-left">
+        <h1>🚦 Intelligent Traffic Management</h1>
+        <p>Real-time congestion prediction &amp; route optimization dashboard</p>
+      </div>
+      <div class="header-right">
+        <div class="date-time" id="date-time"></div>
+        <div class="live-badge"><span class="live-dot"></span> System Active</div>
+      </div>
+    </header>
+
+    <!-- ========== KPI CARDS ========== -->
+    <section class="kpi-grid animate-in delay-2" id="kpi-section">
+      <div class="kpi-card">
+        <span class="kpi-icon">🚗</span>
+        <div class="kpi-label">Total Trips</div>
+        <div class="kpi-value" id="kpi-trips">0</div>
+        <div class="kpi-change up" id="kpi-trips-change">↑ 12% from last week</div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-icon">📊</span>
+        <div class="kpi-label">Avg Congestion</div>
+        <div class="kpi-value" id="kpi-congestion">0%</div>
+        <div class="kpi-change down" id="kpi-congestion-change">↓ 5% from yesterday</div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-icon">📏</span>
+        <div class="kpi-label">Distance Covered</div>
+        <div class="kpi-value" id="kpi-distance">0 km</div>
+        <div class="kpi-change up" id="kpi-distance-change">↑ 8% this month</div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-icon">⏱️</span>
+        <div class="kpi-label">Avg Travel Time</div>
+        <div class="kpi-value" id="kpi-time">0 min</div>
+        <div class="kpi-change up" id="kpi-time-change">↓ 3 min saved today</div>
+      </div>
+    </section>
+
+    <!-- ========== TRIP PLANNER ========== -->
+    <div class="panel animate-in delay-3" id="trip-planner-panel">
+      <div class="panel-title"><span class="icon">🗺️</span> Trip Planner — Route & Congestion</div>
+
+      <div class="trip-planner-layout">
+        <!-- Left: Controls -->
+        <div class="trip-controls">
+          <div class="trip-field-group">
+            <div class="trip-field">
+              <label class="trip-label" for="trip-region">Region</label>
+              <select id="trip-region" class="trip-select">
+                <option value="Delhi">Delhi NCR</option>
+                <option value="Mumbai">Mumbai</option>
+                <option value="Bangalore">Bangalore</option>
+                <option value="Hyderabad">Hyderabad</option>
+                <option value="Kolkata">Kolkata</option>
+              </select>
+            </div>
+            <div class="trip-field-row">
+              <div class="trip-field">
+                <label class="trip-label" for="trip-day">Day</label>
+                <select id="trip-day" class="trip-select"></select>
+              </div>
+              <div class="trip-field">
+                <label class="trip-label" for="trip-hour">Hour</label>
+                <select id="trip-hour" class="trip-select"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="trip-field">
+            <label class="trip-label" for="trip-origin">📍 Starting Point</label>
+            <div class="trip-input-wrap">
+              <input type="text" id="trip-origin" class="trip-input" placeholder="e.g. Connaught Place, Delhi" autocomplete="off" />
+              <div class="trip-suggestions" id="origin-suggestions"></div>
+            </div>
+          </div>
+
+          <div class="trip-field">
+            <label class="trip-label" for="trip-destination">🏁 Destination</label>
+            <div class="trip-input-wrap">
+              <input type="text" id="trip-destination" class="trip-input" placeholder="e.g. IGI Airport, Delhi" autocomplete="off" />
+              <div class="trip-suggestions" id="dest-suggestions"></div>
+            </div>
+          </div>
+
+          <button class="trip-btn" id="trip-plan-btn">
+            <span class="trip-btn-icon">🚀</span> Plan My Route
+          </button>
+
+          <!-- Result Cards -->
+          <div class="trip-results" id="trip-results" style="display:none;">
+            <div class="trip-result-grid">
+              <div class="trip-result-card">
+                <div class="trip-result-icon">📏</div>
+                <div class="trip-result-label">Distance</div>
+                <div class="trip-result-value" id="trip-dist">—</div>
+              </div>
+              <div class="trip-result-card">
+                <div class="trip-result-icon">⏱️</div>
+                <div class="trip-result-label">Est. Time</div>
+                <div class="trip-result-value" id="trip-time">—</div>
+              </div>
+              <div class="trip-result-card">
+                <div class="trip-result-icon">📊</div>
+                <div class="trip-result-label">Congestion</div>
+                <div class="trip-result-value" id="trip-cong">—</div>
+              </div>
+              <div class="trip-result-card">
+                <div class="trip-result-icon">🚗</div>
+                <div class="trip-result-label">Vehicle</div>
+                <div class="trip-result-value" id="trip-vehicle">—</div>
+              </div>
+            </div>
+            <div class="trip-congestion-bar-wrap">
+              <div class="trip-congestion-label">Route Congestion Level</div>
+              <div class="trip-congestion-bar">
+                <div class="trip-congestion-fill" id="trip-cong-bar"></div>
+              </div>
+              <div class="trip-congestion-status" id="trip-cong-status"></div>
+            </div>
+          </div>
+
+          <div class="trip-error" id="trip-error" style="display:none;"></div>
+        </div>
+
+        <!-- Right: Map -->
+        <div class="trip-map-area">
+          <div id="trip-map" class="trip-map"></div>
+          <div class="trip-map-hint" id="trip-map-hint">Enter origin & destination, then click <strong>"Plan My Route"</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== GAUGE + SIGNAL ROW ========== -->
+    <section class="two-col animate-in delay-3">
+      <!-- Congestion Gauge -->
+      <div class="panel" id="gauge-panel">
+        <div class="panel-title"><span class="icon">🎯</span> Current Congestion Level</div>
+        <div class="gauge-container">
+          <div class="gauge-wrapper">
+            <canvas id="gauge-canvas"></canvas>
+            <div class="gauge-center-text">
+              <div class="gauge-value" id="gauge-value">0%</div>
+              <div class="gauge-unit">Congestion</div>
+            </div>
+          </div>
+          <div class="gauge-status low" id="gauge-status">Low Traffic</div>
+        </div>
+      </div>
+
+      <!-- Signal Timing -->
+      <div class="panel" id="signal-panel">
+        <div class="panel-title"><span class="icon">🚥</span> Adaptive Signal Timing</div>
+        <div class="signal-grid">
+          <div class="signal-card">
+            <div class="signal-light green" id="signal-green-light"></div>
+            <div class="signal-label">Green Phase</div>
+            <div class="signal-time" id="signal-green" style="color: var(--accent-teal);">30s</div>
+          </div>
+          <div class="signal-card">
+            <div class="signal-light yellow" id="signal-yellow-light"></div>
+            <div class="signal-label">Yellow Phase</div>
+            <div class="signal-time" id="signal-yellow" style="color: var(--accent-orange);">5s</div>
+          </div>
+          <div class="signal-card">
+            <div class="signal-light red" id="signal-red-light"></div>
+            <div class="signal-label">Red Phase</div>
+            <div class="signal-time" id="signal-red" style="color: var(--accent-red);">10s</div>
+          </div>
+        </div>
+        <div style="margin-top: 20px; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 12px;">
+          <div style="font-size:0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 10px;">Signal Adaptation Logic</div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div style="flex:1; min-width: 120px; padding: 10px 14px; border-radius: 10px; background: rgba(6,214,160,0.08); border: 1px solid rgba(6,214,160,0.15);">
+              <div style="font-size:0.72rem; color: var(--accent-teal); font-weight: 600;">Low Traffic</div>
+              <div style="font-size:0.82rem; color: var(--text-secondary); margin-top:3px;">G:30s Y:5s R:10s</div>
+            </div>
+            <div style="flex:1; min-width: 120px; padding: 10px 14px; border-radius: 10px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.15);">
+              <div style="font-size:0.72rem; color: var(--accent-orange); font-weight: 600;">Moderate</div>
+              <div style="font-size:0.82rem; color: var(--text-secondary); margin-top:3px;">G:20s Y:5s R:20s</div>
+            </div>
+            <div style="flex:1; min-width: 120px; padding: 10px 14px; border-radius: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.15);">
+              <div style="font-size:0.72rem; color: var(--accent-red); font-weight: 600;">High Traffic</div>
+              <div style="font-size:0.82rem; color: var(--text-secondary); margin-top:3px;">G:10s Y:5s R:30s</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== HOURLY + DAILY CHARTS ========== -->
+    <section class="two-col animate-in delay-4">
+      <div class="panel" id="hourly-chart-panel">
+        <div class="panel-title"><span class="icon">📈</span> Hourly Traffic Pattern (Today)</div>
+        <div class="chart-container">
+          <canvas id="hourly-chart"></canvas>
+        </div>
+      </div>
+      <div class="panel" id="daily-chart-panel">
+        <div class="panel-title"><span class="icon">📊</span> Weekly Average Congestion</div>
+        <div class="chart-container">
+          <canvas id="daily-chart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== HEATMAP ========== -->
+    <div class="panel animate-in delay-5" id="heatmap-panel">
+      <div class="panel-title"><span class="icon">🗓️</span> Weekly Congestion Heatmap (Day × Hour)</div>
+      <div class="heatmap-grid" id="heatmap"></div>
+    </div>
+
+    <!-- ========== RECENT TRAVELS ========== -->
+    <div class="panel animate-in delay-6" id="travels-panel">
+      <div class="panel-title"><span class="icon">🧭</span> Recent Travels</div>
+      <div style="overflow-x: auto;">
+        <table class="travel-table" id="travel-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Origin</th>
+              <th>Destination</th>
+              <th>Distance</th>
+              <th>Time</th>
+              <th>Congestion</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="travel-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== TOP ROUTES ========== -->
+    <div class="panel animate-in delay-7" id="routes-panel">
+      <div class="panel-title"><span class="icon">🛣️</span> Top Routes by Usage</div>
+      <div id="route-list"></div>
+    </div>
+
+    <!-- ========== FOOTER ========== -->
+    <footer class="footer">
+      <p>Intelligent Traffic Management System &copy; 2026 &mdash; XGBoost Prediction Model &bull; R + Python + Streamlit</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // ==================== DEMO DATA ====================
+
+    const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+    // Hourly congestion for today (24 hours)
+    const hourlyCongestion = [12,8,6,5,7,18,42,68,82,75,58,45,52,48,44,50,62,78,85,72,55,40,28,16];
+
+    // Weekly average by day
+    const dailyAvg = [62, 58, 55, 60, 72, 35, 28];
+
+    // Heatmap data: 7 days x 24 hours
+    const heatmapData = [
+      [10,6,4,3,5,15,38,65,80,72,55,43,50,46,42,48,60,75,83,70,52,38,25,14], // Mon
+      [8,5,3,3,6,14,35,62,78,70,53,41,48,44,40,46,58,72,80,68,50,36,23,12],  // Tue
+      [9,5,4,3,5,13,33,60,75,68,50,40,46,42,38,44,56,70,78,66,48,34,22,11],  // Wed
+      [11,7,5,4,6,16,40,66,82,74,56,44,52,48,44,50,62,76,84,72,54,40,26,15], // Thu
+      [14,9,6,5,8,20,45,72,88,80,62,50,55,52,48,54,68,82,90,78,60,45,30,18], // Fri
+      [6,4,3,3,4,8,18,30,38,35,32,38,42,40,36,34,30,32,28,24,20,15,10,7],    // Sat
+      [5,3,2,2,3,6,14,22,28,26,24,30,35,34,30,28,24,25,22,18,15,12,8,5],     // Sun
+    ];
+
+    // Travel history
+    const travels = [
+      {origin:'Connaught Place, Delhi', dest:'IGI Airport, Delhi', dist:'18.2 km', time:'42 min', cong:72, day:'Friday'},
+      {origin:'Bandra, Mumbai', dest:'Andheri, Mumbai', dist:'8.5 km', time:'28 min', cong:65, day:'Thursday'},
+      {origin:'MG Road, Bangalore', dest:'Whitefield, Bangalore', dist:'22.1 km', time:'55 min', cong:78, day:'Friday'},
+      {origin:'Rajouri Garden, Delhi', dest:'Noida Sector 62', dist:'25.4 km', time:'65 min', cong:82, day:'Monday'},
+      {origin:'Koramangala, Bangalore', dest:'Electronic City', dist:'14.8 km', time:'35 min', cong:45, day:'Wednesday'},
+      {origin:'Saket, Delhi', dest:'Gurgaon Cyber Hub', dist:'19.6 km', time:'48 min', cong:58, day:'Tuesday'},
+      {origin:'Juhu, Mumbai', dest:'BKC, Mumbai', dist:'7.2 km', time:'22 min', cong:38, day:'Saturday'},
+      {origin:'Indiranagar, Bangalore', dest:'Hebbal, Bangalore', dist:'11.3 km', time:'30 min', cong:52, day:'Thursday'},
+      {origin:'Dwarka, Delhi', dest:'Karol Bagh, Delhi', dist:'16.7 km', time:'45 min', cong:68, day:'Monday'},
+      {origin:'Powai, Mumbai', dest:'Colaba, Mumbai', dist:'24.8 km', time:'58 min', cong:75, day:'Friday'},
+    ];
+
+    // Top routes
+    const topRoutes = [
+      {name:'Connaught Place → IGI Airport', detail:'Delhi NCR', count: 34},
+      {name:'Bandra → Andheri', detail:'Mumbai', count: 28},
+      {name:'MG Road → Whitefield', detail:'Bangalore', count: 22},
+      {name:'Rajouri Garden → Noida', detail:'Delhi NCR', count: 19},
+      {name:'Koramangala → Electronic City', detail:'Bangalore', count: 15},
+      {name:'Saket → Gurgaon Cyber Hub', detail:'Delhi NCR', count: 12},
+    ];
+
+    // ==================== UTILITIES ====================
+
+    function getCongestionColor(value) {
+      if (value < 40) return 'rgba(6, 214, 160, %%A%%)';
+      if (value < 70) return 'rgba(245, 158, 11, %%A%%)';
+      return 'rgba(239, 68, 68, %%A%%)';
+    }
+
+    function getCongestionStatus(value) {
+      if (value < 40) return { text: 'Low Traffic', cls: 'low' };
+      if (value < 70) return { text: 'Moderate Traffic', cls: 'moderate' };
+      return { text: 'High Congestion', cls: 'high' };
+    }
+
+    // ==================== DATE TIME ====================
+
+    function updateDateTime() {
+      const now = new Date();
+      const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' };
+      document.getElementById('date-time').textContent = now.toLocaleDateString('en-IN', opts);
+    }
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+
+    // ==================== KPI ANIMATION ====================
+
+    function animateValue(el, start, end, suffix, duration) {
+      const range = end - start;
+      const startTime = performance.now();
+      function step(ts) {
+        const elapsed = ts - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + range * eased);
+        el.textContent = current.toLocaleString() + suffix;
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    setTimeout(() => {
+      animateValue(document.getElementById('kpi-trips'), 0, 247, '', 1200);
+      animateValue(document.getElementById('kpi-congestion'), 0, 48, '%', 1200);
+      animateValue(document.getElementById('kpi-distance'), 0, 3842, ' km', 1200);
+      animateValue(document.getElementById('kpi-time'), 0, 38, ' min', 1200);
+    }, 400);
+
+    // ==================== GAUGE ====================
+
+    function drawGauge(value) {
+      const canvas = document.getElementById('gauge-canvas');
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const size = 220;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      canvas.style.width = size + 'px';
+      canvas.style.height = size + 'px';
+      ctx.scale(dpr, dpr);
+
+      const cx = size / 2, cy = size / 2, r = 88;
+      const startAngle = 0.75 * Math.PI;
+      const endAngle = 2.25 * Math.PI;
+      const totalArc = endAngle - startAngle;
+      const valueAngle = startAngle + (value / 100) * totalArc;
+
+      // Background arc
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, startAngle, endAngle);
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 14;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Value arc gradient
+      const grad = ctx.createLinearGradient(0, 0, size, size);
+      if (value < 40) {
+        grad.addColorStop(0, '#06d6a0');
+        grad.addColorStop(1, '#3b82f6');
+      } else if (value < 70) {
+        grad.addColorStop(0, '#f59e0b');
+        grad.addColorStop(1, '#ef4444');
+      } else {
+        grad.addColorStop(0, '#ef4444');
+        grad.addColorStop(1, '#ec4899');
+      }
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, startAngle, valueAngle);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 14;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Glow
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, startAngle, valueAngle);
+      ctx.strokeStyle = value < 40 ? 'rgba(6,214,160,0.2)' : value < 70 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)';
+      ctx.lineWidth = 24;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      document.getElementById('gauge-value').textContent = value + '%';
+      const status = getCongestionStatus(value);
+      const statusEl = document.getElementById('gauge-status');
+      statusEl.textContent = status.text;
+      statusEl.className = 'gauge-status ' + status.cls;
+    }
+
+    // Animate gauge
+    const currentHour = new Date().getHours();
+    const currentCongestion = hourlyCongestion[currentHour];
+    let gaugeAnim = 0;
+    function animGauge() {
+      if (gaugeAnim < currentCongestion) {
+        gaugeAnim += 1;
+        drawGauge(gaugeAnim);
+        requestAnimationFrame(animGauge);
+      }
+    }
+    setTimeout(animGauge, 600);
+
+    // ==================== SIGNAL TIMING ====================
+
+    function updateSignals(congestion) {
+      let g, y, r;
+      if (congestion < 40) { g = 30; y = 5; r = 10; }
+      else if (congestion < 70) { g = 20; y = 5; r = 20; }
+      else { g = 10; y = 5; r = 30; }
+      document.getElementById('signal-green').textContent = g + 's';
+      document.getElementById('signal-yellow').textContent = y + 's';
+      document.getElementById('signal-red').textContent = r + 's';
+    }
+    setTimeout(() => updateSignals(currentCongestion), 800);
+
+    // ==================== HOURLY CHART ====================
+
+    const hourlyCtx = document.getElementById('hourly-chart').getContext('2d');
+    const hourlyGrad = hourlyCtx.createLinearGradient(0, 0, 0, 300);
+    hourlyGrad.addColorStop(0, 'rgba(6, 214, 160, 0.3)');
+    hourlyGrad.addColorStop(1, 'rgba(6, 214, 160, 0.0)');
+
+    new Chart(hourlyCtx, {
+      type: 'line',
+      data: {
+        labels: Array.from({length:24}, (_, i) => i + ':00'),
+        datasets: [{
+          label: 'Congestion %',
+          data: hourlyCongestion,
+          borderColor: '#06d6a0',
+          backgroundColor: hourlyGrad,
+          borderWidth: 2.5,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          pointBackgroundColor: '#06d6a0',
+          pointHoverRadius: 6,
+          pointHoverBackgroundColor: '#fff',
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(17,24,39,0.95)',
+            titleColor: '#f1f5f9',
+            bodyColor: '#94a3b8',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            cornerRadius: 10,
+            padding: 12,
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+          },
+          y: {
+            min: 0, max: 100,
+            ticks: { color: '#64748b', font: { size: 10 }, callback: v => v + '%' },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+          }
+        }
+      }
+    });
+
+    // ==================== DAILY CHART ====================
+
+    const dailyCtx = document.getElementById('daily-chart').getContext('2d');
+    new Chart(dailyCtx, {
+      type: 'bar',
+      data: {
+        labels: DAYS.map(d => d.substring(0, 3)),
+        datasets: [{
+          label: 'Avg Congestion %',
+          data: dailyAvg,
+          backgroundColor: dailyAvg.map(v => v < 40 ? 'rgba(6,214,160,0.7)' : v < 70 ? 'rgba(245,158,11,0.7)' : 'rgba(239,68,68,0.7)'),
+          borderRadius: 8,
+          borderSkipped: false,
+          barPercentage: 0.6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(17,24,39,0.95)',
+            titleColor: '#f1f5f9',
+            bodyColor: '#94a3b8',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            cornerRadius: 10,
+            padding: 12,
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#64748b', font: { size: 11, weight: 600 } },
+            grid: { display: false },
+          },
+          y: {
+            min: 0, max: 100,
+            ticks: { color: '#64748b', font: { size: 10 }, callback: v => v + '%' },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+          }
+        }
+      }
+    });
+
+    // ==================== HEATMAP ====================
+
+    (function buildHeatmap() {
+      const container = document.getElementById('heatmap');
+      // Hour labels row
+      const spacer = document.createElement('div');
+      container.appendChild(spacer);
+      for (let h = 0; h < 24; h++) {
+        const lbl = document.createElement('div');
+        lbl.className = 'heatmap-hour-label';
+        lbl.textContent = h;
+        container.appendChild(lbl);
+      }
+      // Data rows
+      for (let d = 0; d < 7; d++) {
+        const dayLabel = document.createElement('div');
+        dayLabel.className = 'heatmap-label';
+        dayLabel.textContent = DAYS[d].substring(0, 3);
+        container.appendChild(dayLabel);
+        for (let h = 0; h < 24; h++) {
+          const cell = document.createElement('div');
+          cell.className = 'heatmap-cell';
+          const val = heatmapData[d][h];
+          const alpha = 0.15 + (val / 100) * 0.85;
+          if (val < 40) cell.style.background = `rgba(6, 214, 160, ${alpha})`;
+          else if (val < 70) cell.style.background = `rgba(245, 158, 11, ${alpha})`;
+          else cell.style.background = `rgba(239, 68, 68, ${alpha})`;
+          cell.title = `${DAYS[d]} ${h}:00 — ${val}%`;
+          container.appendChild(cell);
+        }
+      }
+    })();
+
+    // ==================== TRAVEL TABLE ====================
+
+    (function buildTravelTable() {
+      const tbody = document.getElementById('travel-body');
+      travels.forEach((t, i) => {
+        const status = getCongestionStatus(t.cong);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td style="color:var(--text-muted);font-weight:600;">${i + 1}</td>
+          <td style="color:var(--text-primary);font-weight:500;">${t.origin}</td>
+          <td style="color:var(--text-primary);font-weight:500;">${t.dest}</td>
+          <td>${t.dist}</td>
+          <td>${t.time}</td>
+          <td>${t.cong}%</td>
+          <td><span class="status-badge ${status.cls}">${status.text.split(' ')[0]}</span></td>
+        `;
+        tbody.appendChild(row);
+      });
+    })();
+
+    // ==================== TOP ROUTES ====================
+
+    (function buildRouteList() {
+      const container = document.getElementById('route-list');
+      const maxCount = Math.max(...topRoutes.map(r => r.count));
+      topRoutes.forEach(r => {
+        const pct = (r.count / maxCount) * 100;
+        const div = document.createElement('div');
+        div.className = 'route-item';
+        div.innerHTML = `
+          <div class="route-info">
+            <div class="route-name">${r.name}</div>
+            <div class="route-detail">${r.detail}</div>
+          </div>
+          <div class="route-bar-wrap">
+            <div class="route-bar">
+              <div class="route-bar-fill" style="width: 0%;" data-target="${pct}"></div>
+            </div>
+          </div>
+          <div class="route-count">${r.count} trips</div>
+        `;
+        container.appendChild(div);
+      });
+
+      // Animate bars
+      setTimeout(() => {
+        document.querySelectorAll('.route-bar-fill').forEach(bar => {
+          bar.style.width = bar.dataset.target + '%';
+        });
+      }, 800);
+    })();
+
+    // ==================== TRIP PLANNER ====================
+
+    (function initTripPlanner() {
+      // Populate day/hour selects
+      const daySelect = document.getElementById('trip-day');
+      const hourSelect = document.getElementById('trip-hour');
+      const now = new Date();
+      const todayDayIdx = (now.getDay() + 6) % 7; // Mon=0
+
+      DAYS.forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        if (i === todayDayIdx) opt.selected = true;
+        daySelect.appendChild(opt);
+      });
+
+      for (let h = 0; h < 24; h++) {
+        const opt = document.createElement('option');
+        opt.value = h;
+        opt.textContent = `${h.toString().padStart(2,'0')}:00`;
+        if (h === now.getHours()) opt.selected = true;
+        hourSelect.appendChild(opt);
+      }
+
+      // Init Leaflet map with dark tiles
+      const map = L.map('trip-map', {
+        center: [28.6139, 77.2090],
+        zoom: 11,
+        zoomControl: true,
+      });
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        subdomains: 'abcd',
+        maxZoom: 19,
+      }).addTo(map);
+
+      let routeLayer = null;
+      let markersLayer = L.layerGroup().addTo(map);
+
+      // Region center coords for map recentering
+      const regionCenters = {
+        'Delhi': [28.6139, 77.2090],
+        'Mumbai': [19.0760, 72.8777],
+        'Bangalore': [12.9716, 77.5946],
+        'Hyderabad': [17.3850, 78.4867],
+        'Kolkata': [22.5726, 88.3639],
+      };
+
+      document.getElementById('trip-region').addEventListener('change', function() {
+        const center = regionCenters[this.value];
+        if (center) map.setView(center, 11);
+      });
+
+      // ---- Nominatim Autocomplete ----
+      let debounceTimer = null;
+
+      function setupAutocomplete(inputId, suggestionsId) {
+        const input = document.getElementById(inputId);
+        const sugBox = document.getElementById(suggestionsId);
+
+        input.addEventListener('input', function() {
+          clearTimeout(debounceTimer);
+          const q = this.value.trim();
+          if (q.length < 3) { sugBox.style.display = 'none'; return; }
+
+          debounceTimer = setTimeout(async () => {
+            try {
+              const region = document.getElementById('trip-region').value;
+              const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', ' + region + ', India')}&limit=5&addressdetails=1`, {
+                headers: { 'Accept-Language': 'en' }
+              });
+              const data = await res.json();
+              sugBox.innerHTML = '';
+              if (data.length === 0) { sugBox.style.display = 'none'; return; }
+
+              data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'trip-suggestion-item';
+                div.textContent = item.display_name.split(',').slice(0, 3).join(', ');
+                div.dataset.lat = item.lat;
+                div.dataset.lon = item.lon;
+                div.dataset.name = item.display_name.split(',').slice(0, 2).join(', ');
+                div.addEventListener('click', () => {
+                  input.value = div.dataset.name;
+                  input.dataset.lat = div.dataset.lat;
+                  input.dataset.lon = div.dataset.lon;
+                  sugBox.style.display = 'none';
+                });
+                sugBox.appendChild(div);
+              });
+              sugBox.style.display = 'block';
+            } catch(e) {
+              sugBox.style.display = 'none';
+            }
+          }, 400);
+        });
+
+        // Close suggestions on outside click
+        document.addEventListener('click', (e) => {
+          if (!input.contains(e.target) && !sugBox.contains(e.target)) {
+            sugBox.style.display = 'none';
+          }
+        });
+      }
+
+      setupAutocomplete('trip-origin', 'origin-suggestions');
+      setupAutocomplete('trip-destination', 'dest-suggestions');
+
+      // ---- Geocode a text input (fallback if user didn't pick suggestion) ----
+      async function geocode(text) {
+        const region = document.getElementById('trip-region').value;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text + ', ' + region + ', India')}&limit=1`, {
+          headers: { 'Accept-Language': 'en' }
+        });
+        const data = await res.json();
+        if (data.length === 0) return null;
+        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name.split(',').slice(0, 2).join(', ') };
+      }
+
+      // ---- Congestion prediction from heatmap data ----
+      function predictCongestion(day, hour) {
+        const dayIdx = DAYS.indexOf(day);
+        if (dayIdx === -1) return 50;
+        return heatmapData[dayIdx][hour] || 50;
+      }
+
+      // ---- Vehicle recommendation (from your Source.py logic) ----
+      function getVehicleRecommendation(distKm) {
+        if (distKm < 5) return 'Bike / Auto';
+        if (distKm < 20) return 'Car / Bus';
+        return 'Bus / Metro';
+      }
+
+      // ---- Custom map icons ----
+      function createIcon(emoji, color) {
+        return L.divIcon({
+          className: 'trip-marker',
+          html: `<div style="background:${color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px ${color}88;border:2px solid rgba(255,255,255,0.3);">${emoji}</div>`,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+          popupAnchor: [0, -20],
+        });
+      }
+
+      // ---- Plan Trip ----
+      document.getElementById('trip-plan-btn').addEventListener('click', async function() {
+        const btn = this;
+        const errorEl = document.getElementById('trip-error');
+        const resultsEl = document.getElementById('trip-results');
+        const hintEl = document.getElementById('trip-map-hint');
+        errorEl.style.display = 'none';
+        resultsEl.style.display = 'none';
+
+        const originInput = document.getElementById('trip-origin');
+        const destInput = document.getElementById('trip-destination');
+        const day = document.getElementById('trip-day').value;
+        const hour = parseInt(document.getElementById('trip-hour').value);
+
+        if (!originInput.value.trim() || !destInput.value.trim()) {
+          errorEl.textContent = '⚠️ Please enter both origin and destination.';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="trip-btn-spinner"></span> Finding route...';
+
+        try {
+          // Geocode origin
+          let originCoords, destCoords;
+          if (originInput.dataset.lat) {
+            originCoords = { lat: parseFloat(originInput.dataset.lat), lon: parseFloat(originInput.dataset.lon), name: originInput.value };
+          } else {
+            originCoords = await geocode(originInput.value);
+          }
+
+          if (!originCoords) {
+            throw new Error(`Could not find location: "${originInput.value}"`);
+          }
+
+          // Geocode destination
+          if (destInput.dataset.lat) {
+            destCoords = { lat: parseFloat(destInput.dataset.lat), lon: parseFloat(destInput.dataset.lon), name: destInput.value };
+          } else {
+            destCoords = await geocode(destInput.value);
+          }
+
+          if (!destCoords) {
+            throw new Error(`Could not find location: "${destInput.value}"`);
+          }
+
+          // Get route from OSRM
+          const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originCoords.lon},${originCoords.lat};${destCoords.lon},${destCoords.lat}?overview=full&geometries=geojson&steps=true`;
+          const routeRes = await fetch(osrmUrl);
+          const routeData = await routeRes.json();
+
+          if (routeData.code !== 'Ok' || !routeData.routes || routeData.routes.length === 0) {
+            throw new Error('OSRM could not find a route between these locations.');
+          }
+
+          const route = routeData.routes[0];
+          const distKm = (route.distance / 1000).toFixed(1);
+          const baseTimeMin = route.duration / 60;
+          const congestion = predictCongestion(day, hour);
+          const adjustedTime = baseTimeMin * (1 + congestion / 200);
+          const vehicle = getVehicleRecommendation(parseFloat(distKm));
+          const congStatus = getCongestionStatus(congestion);
+
+          // Clear previous layers
+          markersLayer.clearLayers();
+          if (routeLayer) map.removeLayer(routeLayer);
+
+          // Draw route
+          const routeCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+          // Route glow (wider, transparent)
+          const routeColor = congestion < 40 ? '#06d6a0' : congestion < 70 ? '#f59e0b' : '#ef4444';
+          L.polyline(routeCoords, {
+            color: routeColor,
+            weight: 12,
+            opacity: 0.25,
+            smoothFactor: 1,
+          }).addTo(markersLayer);
+
+          // Route line
+          routeLayer = L.polyline(routeCoords, {
+            color: routeColor,
+            weight: 5,
+            opacity: 0.9,
+            smoothFactor: 1,
+            lineCap: 'round',
+            lineJoin: 'round',
+          }).addTo(markersLayer);
+
+          // Markers
+          L.marker([originCoords.lat, originCoords.lon], { icon: createIcon('📍', '#06d6a0') })
+            .bindPopup(`<b>Start:</b> ${originCoords.name}`)
+            .addTo(markersLayer);
+
+          L.marker([destCoords.lat, destCoords.lon], { icon: createIcon('🏁', '#ef4444') })
+            .bindPopup(`<b>End:</b> ${destCoords.name}`)
+            .addTo(markersLayer);
+
+          // Fit map to route
+          map.fitBounds(L.polyline(routeCoords).getBounds().pad(0.15));
+
+          // Update results
+          document.getElementById('trip-dist').textContent = distKm + ' km';
+          document.getElementById('trip-time').textContent = Math.round(adjustedTime) + ' min';
+          document.getElementById('trip-cong').textContent = congestion + '%';
+          document.getElementById('trip-vehicle').textContent = vehicle;
+
+          const congBar = document.getElementById('trip-cong-bar');
+          congBar.style.width = '0%';
+          congBar.style.background = routeColor;
+          setTimeout(() => { congBar.style.width = congestion + '%'; }, 100);
+
+          const statusEl = document.getElementById('trip-cong-status');
+          statusEl.textContent = congStatus.text;
+          statusEl.className = 'trip-congestion-status ' + congStatus.cls;
+
+          resultsEl.style.display = 'block';
+          hintEl.style.display = 'none';
+
+        } catch (err) {
+          errorEl.textContent = '❌ ' + err.message;
+          errorEl.style.display = 'block';
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<span class="trip-btn-icon">🚀</span> Plan My Route';
+        }
+      });
+    })();
+
+  </script>
+</body>
+</html>
