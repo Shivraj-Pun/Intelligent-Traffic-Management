@@ -1,7 +1,6 @@
-# Intelligent-Traffic-Management
-# Intelligent Traffic Management
+# 🚦 Intelligent Traffic Management
 
-An end-to-end Machine Learning based traffic congestion forecasting system that predicts traffic conditions and provides interactive visualization for traffic analysis.
+A smart traffic congestion prediction and route planning system built with **R (XGBoost)** for machine learning and **Python (Streamlit)** for the interactive web interface, complemented by an HTML/CSS dashboard.
 
 ## Overview
 
@@ -11,90 +10,95 @@ The system uses XGBoost for congestion prediction, an R Plumber REST API for ser
 
 ## Features
 
-- Traffic congestion prediction using XGBoost
-- Real-time forecasting through REST APIs
-- Interactive Streamlit dashboard
-- Geospatial visualization using Folium
-- Historical traffic trend analysis
-- Scalable architecture for future smart-city integration
+- **Congestion Prediction** — XGBoost regression model trained on traffic data with engineered features (rush hour flags, cyclic hour encoding, weekend indicators)
+- **Smart Route Planning** — Interactive map with real-time route rendering via OSRM, geocoding via Geopy, and congestion-aware travel time estimates
+- **Traffic Dashboard** — Standalone HTML/CSS dashboard for traffic data visualization
+- **REST API** — R Plumber API exposing prediction and EDA endpoints for the Streamlit frontend
+- **Scalable Architecture** — Designed for future smart-city integration
 
 ## Tech Stack
 
-### Machine Learning
-- XGBoost
-- R
-- 
-### Frontend & Visualization
-- Streamlit
-- Folium
+| Layer | Technology |
+|---|---|
+| ML Model | R, XGBoost, caret, dplyr |
+| API | R Plumber |
+| Frontend | Python, Streamlit, Folium, Geopy |
+| Dashboard | HTML, CSS |
+| Routing | OSRM (Open Source Routing Machine) |
+| Data Processing | Pandas, NumPy |
 
-### Data Processing
-- Pandas
-- NumPy
+## Project Structure
+
+```
+├── Traffic.R               # Main R script — data prep, model training, evaluation, interactive CLI
+├── traffic_model.R          # R model training module (used by the API)
+├── traffic_model_api.R      # R Plumber API — /predict and /eda endpoints
+├── streamlit_app.py         # Streamlit UI — route mapping + congestion display
+├── traffic_route.py         # Extended Streamlit UI — OSRM routing + EDA charts
+└── dashboard/
+    ├── index.html           # Standalone traffic dashboard
+    └── index.css            # Dashboard styles
+```
 
 ## Machine Learning Pipeline
 
-### Data Preprocessing
-
-- Handling missing values
-- Data cleaning
-- Feature selection
-- Data normalization
-
 ### Feature Engineering
 
-Traffic-related features were generated to improve predictive performance, including:
-
-- Traffic volume indicators
-- Temporal patterns
-- Congestion trends
-- Historical observations
+Traffic-related features were generated to improve predictive performance:
+- Cyclic hour transformations (sin/cos encoding)
+- Rush hour indicators (8–10 AM, 5–7 PM)
+- Weekend flags
+- Day-of-week numeric encoding
 
 ### Model Training
 
-The congestion forecasting model was trained using XGBoost, a gradient boosting framework known for high predictive performance on structured datasets.
+The congestion forecasting model was trained using XGBoost, a gradient boosting framework known for high predictive performance on structured datasets. The model is trained on 80% of the data with early stopping.
 
 ### Evaluation
 
-Performance was evaluated using regression metrics including:
-
-- R² Score
+Performance was evaluated using regression metrics:
+- **R² Score > 0.85**
 - Mean Absolute Error (MAE)
 - Root Mean Squared Error (RMSE)
 
-## Results
+## Getting Started
 
-- Achieved **R² Score > 0.85**
-- Successfully forecasted congestion trends
-- Enabled real-time prediction serving through APIs
+### Prerequisites
 
-## Installation
+- **R** (≥ 4.0) with packages: `dplyr`, `caret`, `xgboost`, `plumber`
+- **Python** (≥ 3.10) with packages: `streamlit`, `pandas`, `requests`, `folium`, `geopy`, `streamlit-folium`, `polyline`, `seaborn`, `matplotlib`
 
 ### Clone Repository
 
 ```bash
 git clone https://github.com/Shivraj-Pun/Intelligent-Traffic-Management.git
-
 cd Intelligent-Traffic-Management
 ```
 
-### Install Dependencies
+### Run the R Prediction API
 
 ```bash
-pip install -r requirements.txt
+Rscript -e "library(plumber); pr('traffic_model_api.R') %>% pr_run(port=8000)"
 ```
 
-### Start Backend API
+### Run the Streamlit App
 
 ```bash
-Rscript api.R
+streamlit run streamlit_app.py
+# or
+streamlit run traffic_route.py
 ```
 
-### Launch Dashboard
+### View the Dashboard
 
-```bash
-streamlit run app.py
-```
+Open `dashboard/index.html` in your browser.
+
+## How It Works
+
+1. **Data Preparation** — Traffic data is loaded from CSV and enriched with features: day-of-week encoding, rush hour flag, weekend flag, and cyclic hour transformations (sin/cos)
+2. **Model Training** — An XGBoost gradient boosting model is trained on 80% of the data with early stopping, predicting congestion percentage
+3. **API Layer** — The trained model is served via a Plumber REST API at `localhost:8000`
+4. **Frontend** — Streamlit apps consume the API, display routes on Folium maps, and show congestion predictions with color-coded status indicators
 
 ## Future Improvements
 
@@ -119,3 +123,7 @@ streamlit run app.py
 
 - LinkedIn: https://www.linkedin.com/in/shivraj-pun
 - GitHub: https://github.com/Shivraj-Pun
+
+## License
+
+This project is for educational purposes.
